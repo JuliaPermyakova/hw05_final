@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Об авторе проекта{% endblock %}
+{% block content %}
+<h1>Привет, я автор</h1>
+<p>
+  Тут я размещу информацию о себе, используя свои умения верстать, когда у меня будет больше времени, а пока дедлайны горят.
+  Но крутым мемчикам быть ;)</br>
+  <a class="navbar-brand">
+    <img src="{% static 'img/mem1.jpg' %}" width="300" height="300" class="d-inline-block align-top" alt="">
+  </a>
+  <a class="navbar-brand">
+    <img src="{% static 'img/mem2.jpg' %}" width="300" height="300" class="d-inline-block align-top" alt="">
+  </a>
+  <a class="navbar-brand">
+    <img src="{% static 'img/mem3.jpg' %}" width="300" height="300" class="d-inline-block align-top" alt="">
+  </a>
+</p>
+{% endblock %}
