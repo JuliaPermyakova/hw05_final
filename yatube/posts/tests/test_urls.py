@@ -2,7 +2,7 @@ from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
-from ..models import Group, Post, User, Comment, Follow
+from ..models import Group, Post, User, Comment
 
 User = get_user_model()
 
@@ -92,7 +92,8 @@ class PostURLTests(TestCase):
 
     def test_comment_only_for_authorized_client(self):
         """Комментирование доступно только для авторизованных"""
-        response = self.guest_client.get(f"/posts/{self.post.id}/comment/", follow=True)
+        response = self.guest_client.get(f"/posts/{self.post.id}/comment/",
+                                         follow=True)
         self.assertRedirects(
             response, f"/auth/login/?next=/posts/{self.post.id}/comment/"
         )

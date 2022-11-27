@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django import forms
 
-from ..models import Group, Post, User, Comment, Follow
+from ..models import Group, Post, User, Follow
 
 
 class PostPagesTests(TestCase):
@@ -91,7 +91,8 @@ class PostPagesTests(TestCase):
         self.assertEqual(response.context.get("post").text, self.post.text)
         self.assertEqual(response.context.get("post").author, self.post.author)
         self.assertEqual(response.context.get("post").group, self.post.group)
-        self.assertEqual(response.context["author_posts"], Post.objects.count())
+        self.assertEqual(response.context["author_posts"],
+                         Post.objects.count())
 
     def test_edit_show_correct_context(self):
         """Ожидаемый контекст в шаблоне create_edit."""
@@ -160,15 +161,18 @@ class PostPagesTests(TestCase):
         self.assertEqual(response.content, response_cache.content)
 
     def test_follow_page(self):
-        """Новая запись пользователя появляется в ленте тех, кто на него подписан"""
-        response = self.authorized_client_not_author.get(reverse("posts:follow_index"))
+        """Новая запись пользователя появляется в ленте тех,
+        кто на него подписан"""
+        response = self.authorized_client_not_author.get(
+            reverse("posts:follow_index"))
         self.assertNotIn(self.post, response.context["page_obj"])
 
     def test_follow(self):
         response = self.authorized_client.get(reverse("posts:follow_index"))
         self.assertEqual(len(response.context["page_obj"]), 0)
         Follow.objects.get_or_create(user=self.user, author=self.post.author)
-        response_aftr = self.authorized_client.get(reverse("posts:follow_index"))
+        response_aftr = self.authorized_client.get(
+            reverse("posts:follow_index"))
         self.assertEqual(len(response_aftr.context["page_obj"]), 1)
         self.assertIn(self.post, response_aftr.context["page_obj"])
 
@@ -204,7 +208,10 @@ class TaskPagesTests(TestCase):
             name="small.gif", content=cls.small_gif, content_type="image/gif"
         )
         cls.post = Post.objects.create(
-            author=cls.user, text="Тестовый текст", group=cls.group, image=cls.uploaded
+            author=cls.user,
+            text="Тестовый текст",
+            group=cls.group,
+            image=cls.uploaded
         )
 
     @classmethod
@@ -220,7 +227,8 @@ class TaskPagesTests(TestCase):
         response = self.guest_client.get(
             reverse("posts:group_list", kwargs={"slug": self.group.slug}),
         )
-        self.assertEqual(response.context["page_obj"][0].image, self.post.image)
+        self.assertEqual(response.context["page_obj"][0].image,
+                         self.post.image)
 
     def test_image_in_index_and_profile_page(self):
         """Картинка передается на страницу index_and_profile."""
@@ -231,7 +239,8 @@ class TaskPagesTests(TestCase):
         for url in templates:
             with self.subTest(url):
                 response = self.guest_client.get(url)
-                self.assertEqual(response.context["page_obj"][0].image, self.post.image)
+                self.assertEqual(response.context["page_obj"][0].image,
+                                 self.post.image)
 
     def test_image_in_post_detail_page(self):
         """Картинка передается на страницу post_detail."""
@@ -243,5 +252,8 @@ class TaskPagesTests(TestCase):
     def test_image_in_page(self):
         """Проверяем что пост с картинкой создается в БД"""
         self.assertTrue(
-            Post.objects.filter(text="Тестовый текст", image="posts/small.gif").exists()
+            Post.objects.filter(
+                text="Тестовый текст",
+                image="posts/small.gif"
+            ).exists()
         )
