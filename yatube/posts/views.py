@@ -6,7 +6,8 @@ from .models import Group, Post, User, Comment, Follow
 
 
 def index(request):
-    context = func_paginator(Post.objects.all(), request)
+    context = func_paginator(
+        Post.objects.all().select_related("group"), request)
     return render(request, "posts/index.html", context)
 
 
@@ -22,7 +23,9 @@ def group_posts(request, slug):
 def profile(request, username):
     user = get_object_or_404(User, username=username)
     post_count = user.posts.count()
-    following = user.following.exists()
+    following = request.user.is_authenticated
+    if following:
+        following = user.following.filter(user=request.user).exists()
     context = {
         "author": user,
         "post_count": post_count,

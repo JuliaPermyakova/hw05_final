@@ -92,8 +92,9 @@ class PostURLTests(TestCase):
 
     def test_comment_only_for_authorized_client(self):
         """Комментирование доступно только для авторизованных"""
-        response = self.guest_client.get(f"/posts/{self.post.id}/comment/",
-                                         follow=True)
+        response = self.guest_client.get(
+            f"/posts/{self.post.id}/comment/", follow=True
+        )
         self.assertRedirects(
             response, f"/auth/login/?next=/posts/{self.post.id}/comment/"
         )

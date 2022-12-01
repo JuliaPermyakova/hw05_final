@@ -16,6 +16,8 @@ class PostPagesTests(TestCase):
         super().setUpClass()
         cls.user = User.objects.create_user(username="test_name")
         cls.no_user = User.objects.create(username="no_author")
+        cls.follower = User.objects.create(username="test_follower")
+        cls.following = User.objects.create(username="test_following")
         cls.group = Group.objects.create(
             title="Тестовая группа",
             slug="test_slug",
@@ -26,6 +28,10 @@ class PostPagesTests(TestCase):
             text="Тестовый пост",
             group=cls.group,
         )
+        cls.follow = Follow.objects.create(
+            user=cls.follower,
+            author=cls.following,
+        )
 
     def setUp(self):
         self.guest_client = Client()
@@ -33,6 +39,10 @@ class PostPagesTests(TestCase):
         self.authorized_client.force_login(PostPagesTests.user)
         self.authorized_client_not_author = Client()
         self.authorized_client_not_author.force_login(self.no_user)
+        self.client_follower = Client()
+        self.client_follower.force_login(self.follower)
+        self.client_following = Client()
+        self.client_following.force_login(self.following)
         cache.clear()
 
     def test_pages_uses_correct_template(self):
@@ -91,8 +101,8 @@ class PostPagesTests(TestCase):
         self.assertEqual(response.context.get("post").text, self.post.text)
         self.assertEqual(response.context.get("post").author, self.post.author)
         self.assertEqual(response.context.get("post").group, self.post.group)
-        self.assertEqual(response.context["author_posts"],
-                         Post.objects.count())
+        self.assertEqual(
+            response.context["author_posts"], Post.objects.count())
 
     def test_edit_show_correct_context(self):
         """Ожидаемый контекст в шаблоне create_edit."""
@@ -159,34 +169,34 @@ class PostPagesTests(TestCase):
         Post.objects.get(id=self.post.id).delete()
         response_cache = self.guest_client.get(reverse("posts:index"))
         self.assertEqual(response.content, response_cache.content)
+        cache.clear()
+        response_clear = self.guest_client.get(reverse("posts:index"))
+        self.assertNotEqual(response, response_clear)
 
     def test_follow_page(self):
         """Новая запись пользователя появляется в ленте тех,
         кто на него подписан"""
-        response = self.authorized_client_not_author.get(
-            reverse("posts:follow_index"))
+        response = self.client_follower.get(reverse("posts:follow_index"))
         self.assertNotIn(self.post, response.context["page_obj"])
 
     def test_follow(self):
-        response = self.authorized_client.get(reverse("posts:follow_index"))
-        self.assertEqual(len(response.context["page_obj"]), 0)
-        Follow.objects.get_or_create(user=self.user, author=self.post.author)
-        response_aftr = self.authorized_client.get(
-            reverse("posts:follow_index"))
-        self.assertEqual(len(response_aftr.context["page_obj"]), 1)
-        self.assertIn(self.post, response_aftr.context["page_obj"])
+        self.client_follower.get(
+            reverse(
+                "posts:profile_follow", kwargs={"username": self.following}))
+        self.assertEqual(Follow.objects.all().count(), 1)
 
     def test_unfollow(self):
-        Follow.objects.all().delete()
-        response = self.authorized_client.get(reverse("posts:follow_index"))
-        self.assertEqual(len(response.context["page_obj"]), 0)
+        self.client_follower.get(
+            reverse(
+                "posts:profile_unfollow", kwargs={"username": self.following}))
+        self.assertEqual(Follow.objects.all().count(), 0)
 
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
-class TaskPagesTests(TestCase):
+class PicturePagesTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -221,14 +231,17 @@ class TaskPagesTests(TestCase):
 
     def setUp(self):
         self.guest_client = Client()
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
 
     def test_image_in_group_list_page(self):
         """Картинка передается на страницу group_list."""
         response = self.guest_client.get(
             reverse("posts:group_list", kwargs={"slug": self.group.slug}),
         )
-        self.assertEqual(response.context["page_obj"][0].image,
-                         self.post.image)
+        self.assertEqual(
+            response.context["page_obj"][0].image, self.post.image
+        )
 
     def test_image_in_index_and_profile_page(self):
         """Картинка передается на страницу index_and_profile."""
@@ -239,8 +252,8 @@ class TaskPagesTests(TestCase):
         for url in templates:
             with self.subTest(url):
                 response = self.guest_client.get(url)
-                self.assertEqual(response.context["page_obj"][0].image,
-                                 self.post.image)
+                self.assertEqual(
+                    response.context["page_obj"][0].image, self.post.image)
 
     def test_image_in_post_detail_page(self):
         """Картинка передается на страницу post_detail."""
@@ -251,9 +264,7 @@ class TaskPagesTests(TestCase):
 
     def test_image_in_page(self):
         """Проверяем что пост с картинкой создается в БД"""
+        self.authorized_client.get(reverse("posts:post_create"))
         self.assertTrue(
-            Post.objects.filter(
-                text="Тестовый текст",
-                image="posts/small.gif"
-            ).exists()
-        )
+            Post.objects.filter(text="Тестовый текст",
+                                image="posts/small.gif").exists())
