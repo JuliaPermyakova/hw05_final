@@ -1,8 +1,9 @@
-from django.test import Client, TestCase
-from django.urls import reverse
 from http import HTTPStatus
 
-from ..models import Post, Group, User, Comment
+from django.test import Client, TestCase
+from django.urls import reverse
+
+from ..models import Comment, Group, Post, User
 
 
 class PostFormTests(TestCase):

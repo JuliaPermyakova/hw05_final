@@ -1,8 +1,9 @@
 from http import HTTPStatus
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
-from ..models import Group, Post, User, Comment
+from ..models import Comment, Group, Post, User
 
 User = get_user_model()
 

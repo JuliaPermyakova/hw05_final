@@ -1,13 +1,14 @@
 import shutil
 import tempfile
-from django.core.cache import cache
-from django.urls import reverse
+
+from django import forms
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
-from django import forms
+from django.urls import reverse
 
-from ..models import Group, Post, User, Follow
+from ..models import Follow, Group, Post, User
 
 
 class PostPagesTests(TestCase):
@@ -34,6 +35,7 @@ class PostPagesTests(TestCase):
         )
 
     def setUp(self):
+        cache.clear()
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(PostPagesTests.user)
@@ -43,7 +45,6 @@ class PostPagesTests(TestCase):
         self.client_follower.force_login(self.follower)
         self.client_following = Client()
         self.client_following.force_login(self.following)
-        cache.clear()
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
@@ -165,8 +166,11 @@ class PostPagesTests(TestCase):
 
     def test_cache_check(self):
         """Проверка кеширования."""
+        post = Post.objects.create(
+            text='Тестовый текст',
+            author=self.user)
         response = self.guest_client.get(reverse("posts:index"))
-        Post.objects.get(id=self.post.id).delete()
+        post.delete()
         response_cache = self.guest_client.get(reverse("posts:index"))
         self.assertEqual(response.content, response_cache.content)
         cache.clear()
@@ -180,16 +184,20 @@ class PostPagesTests(TestCase):
         self.assertNotIn(self.post, response.context["page_obj"])
 
     def test_follow(self):
-        self.client_follower.get(
+        self.client_follower.post(
             reverse(
                 "posts:profile_follow", kwargs={"username": self.following}))
-        self.assertEqual(Follow.objects.all().count(), 1)
+        self.assertEqual(
+            Follow.objects.filter(
+                user_id=self.follower, author_id=self.following).count(), 1)
 
     def test_unfollow(self):
-        self.client_follower.get(
+        self.client_follower.post(
             reverse(
                 "posts:profile_unfollow", kwargs={"username": self.following}))
-        self.assertEqual(Follow.objects.all().count(), 0)
+        self.assertEqual(
+            Follow.objects.filter(
+                user_id=self.follower, author_id=self.following).count(), 0)
 
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -264,7 +272,7 @@ class PicturePagesTests(TestCase):
 
     def test_image_in_page(self):
         """Проверяем что пост с картинкой создается в БД"""
-        self.authorized_client.get(reverse("posts:post_create"))
+        self.authorized_client.post(reverse("posts:post_create"))
         self.assertTrue(
             Post.objects.filter(text="Тестовый текст",
                                 image="posts/small.gif").exists())
